@@ -475,6 +475,7 @@ with st.sidebar:
     st.divider()
     if st.button("🔄 Resetar todos os filtros", use_container_width=True):
         st.session_state.reset_key += 1
+        st.session_state["aba_ativa"] = "📈 Visão Geral"  # volta pra primeira aba
         st.rerun()
 
 # ============================================================
@@ -493,6 +494,7 @@ if not tipos_sel:
     )
     if st.button("🔄 Resetar filtros", type="primary"):
         st.session_state.reset_key += 1
+        st.session_state["aba_ativa"] = "📈 Visão Geral"
         st.rerun()
     st.stop()
 
@@ -513,6 +515,7 @@ if df.empty:
     )
     if st.button("🔄 Resetar filtros", type="primary"):
         st.session_state.reset_key += 1
+        st.session_state["aba_ativa"] = "📈 Visão Geral"
         st.rerun()
     st.stop()
 
@@ -624,17 +627,31 @@ col4.metric("Operações", fmt_int(op_total),
             help="⚠️ Sem outliers" if remover_outliers else None)
 
 # ============================================================
-# 10. ABAS
+# 10. NAVEGAÇÃO (abas com estado persistente em session_state)
 # ============================================================
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📈 Visão Geral", "🏦 Bancos", "🗺️ UFs", "🔬 Outliers"
-])
+ABAS = ["📈 Visão Geral", "🏦 Bancos", "🗺️ UFs", "🔬 Outliers"]
+
+if "aba_ativa" not in st.session_state:
+    st.session_state["aba_ativa"] = ABAS[0]
+
+aba_sel = st.segmented_control(
+    "Navegação",
+    options=ABAS,
+    key="aba_ativa",
+    label_visibility="collapsed",
+)
+
+# Segurança: se o usuário "desmarcar" a seleção, cai na primeira aba
+if aba_sel is None:
+    st.session_state["aba_ativa"] = ABAS[0]
+    aba_sel = ABAS[0]
+
+st.markdown("---")
 
 # ---------- ABA 1 ----------
-with tab1:
+if aba_sel == "📈 Visão Geral":
     st.subheader("Evolução Mensal do Volume")
     st.caption("Top 8 bancos por volume total. Use zoom e hover do Plotly para explorar.")
-    # ✅ Aviso compacto no gráfico de linha
     if AVISO_COMPACTO:
         st.markdown(AVISO_COMPACTO, unsafe_allow_html=True)
 
@@ -817,10 +834,9 @@ with tab1:
             st.info("Os dois períodos têm volumes equivalentes.")
 
 # ---------- ABA 2 ----------
-with tab2:
+elif aba_sel == "🏦 Bancos":
     st.subheader("🏆 Rankings Comparativos")
     st.caption("Top 8 bancos e UFs por volume e operações. Reflete o comportamento das instituições.")
-    # ✅ Aviso compacto antes dos rankings
     if AVISO_COMPACTO:
         st.markdown(AVISO_COMPACTO, unsafe_allow_html=True)
 
@@ -832,7 +848,6 @@ with tab2:
         .nlargest(8, 'volume')
     )
 
-    # ✅ Footer HTML adicionado aos cards quando outliers estão removidos
     footer_aviso = (
         '<div class="ranking-footer-aviso">⚠️ Sem outliers (IQR por banco)</div>'
         if remover_outliers else ""
@@ -956,7 +971,7 @@ with tab2:
     )
 
 # ---------- ABA 3 ----------
-with tab3:
+elif aba_sel == "🗺️ UFs":
     st.subheader("Distribuição Geográfica do Volume")
     st.caption("Volume financeiro agregado por Unidade Federativa.")
     if AVISO_COMPACTO:
@@ -1045,7 +1060,7 @@ with tab3:
     )
 
 # ---------- ABA 4 ----------
-with tab4:
+elif aba_sel == "🔬 Outliers":
     st.subheader("Diagnóstico de Outliers")
 
     col_m1, col_m2, col_m3 = st.columns(3)
@@ -1067,7 +1082,6 @@ with tab4:
         """
     )
 
-    # ✅ Nota sobre o estado atual do toggle nesta aba
     if remover_outliers:
         st.markdown(
             '<div class="aviso-outliers">'
@@ -1106,7 +1120,6 @@ with tab4:
 # ============================================================
 st.markdown("---")
 with st.expander("🗂️ Ver e baixar dados filtrados"):
-    # ✅ Aviso dentro do expander
     if AVISO_GLOBAL:
         st.markdown(AVISO_GLOBAL, unsafe_allow_html=True)
 
