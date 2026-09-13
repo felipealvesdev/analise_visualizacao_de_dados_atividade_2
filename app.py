@@ -1135,6 +1135,6 @@ with st.expander("🗂️ Ver e baixar dados filtrados"):
 
 st.markdown("---")
 st.caption(
-    "Dashboard desenvolvido para a Atividade II — Análise e Visualização de Dados | "
+    "Aluno: Felipe Alexandre Alves da Silva | Dashboard desenvolvido para a Atividade II — Análise e Visualização de Dados | "
     "CESAR School | Plotly Express + Streamlit + tratamento de outliers por IQR."
 )
