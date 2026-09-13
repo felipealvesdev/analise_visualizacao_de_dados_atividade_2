@@ -431,8 +431,8 @@ Projeto de uso **acadêmico e educacional**. Dados públicos do programa **Desen
 
 <div align="center">
 
-**Desenvolvido com 💚 por Felipe Alexandre Alves da Silva**
+**Desenvolvido por Felipe Alexandre Alves da Silva**
 
-*Análise e Visualização de Dados · CESAR School · 2025*
+*Análise e Visualização de Dados · CESAR School · 2026*
 
 </div>
