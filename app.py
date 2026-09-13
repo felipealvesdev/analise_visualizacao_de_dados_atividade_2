@@ -934,7 +934,9 @@ with tab4:
         | Métrica | Com outliers | Sem outliers |
         |---|---|---|
         | Volume máximo | {fmt_brl(resumo['max_com_outliers'])} | {fmt_brl(resumo['max_sem_outliers'])} |
-        | Mediana | {fmt_brl(resumo['mediana'])} | — |
+        | Volume mínimo | {fmt_brl(resumo['min_com_outliers'])} | {fmt_brl(resumo['min_sem_outliers'])} |
+        | Mediana | {fmt_brl(resumo['mediana'])} | {fmt_brl(resumo['mediana_sem_outliers'])} |
+        | Média | {fmt_brl(resumo['media_com_outliers'])} | {fmt_brl(resumo['media_sem_outliers'])} |
         """
     )
 
