@@ -66,8 +66,11 @@ def resumo_outliers(df: pd.DataFrame, coluna: str, mascara: pd.Series) -> dict:
             "media_com_outliers": 0,
             "media_sem_outliers": 0,
             "mediana": 0,
+            "mediana_sem_outliers": 0,
             "max_com_outliers": 0,
             "max_sem_outliers": 0,
+            "min_com_outliers": 0,
+            "min_sem_outliers": 0,
         }
 
     # Garantir que a máscara é booleana e alinhada ao índice
@@ -82,6 +85,9 @@ def resumo_outliers(df: pd.DataFrame, coluna: str, mascara: pd.Series) -> dict:
         "media_com_outliers": df[coluna].mean(),
         "media_sem_outliers": df_sem[coluna].mean() if len(df_sem) > 0 else 0,
         "mediana": df[coluna].median(),
+        "mediana_sem_outliers": df_sem[coluna].median() if len(df_sem) > 0 else 0,
         "max_com_outliers": df[coluna].max(),
         "max_sem_outliers": df_sem[coluna].max() if len(df_sem) > 0 else 0,
+        "min_com_outliers": df[coluna].min(),
+        "min_sem_outliers": df_sem[coluna].min() if len(df_sem) > 0 else 0,
     }
