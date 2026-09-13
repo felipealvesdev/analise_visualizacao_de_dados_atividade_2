@@ -18,3 +18,4 @@ Thumbs.db
 # Cache Python
 .pytest_cache/
 .mypy_cache/
+src/__pycache__/

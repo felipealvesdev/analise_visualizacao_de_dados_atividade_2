@@ -1,0 +1,18 @@
+[theme]
+# Paleta base — vai ser usada como padrão (modo claro)
+primaryColor = "#4a7c7e"
+backgroundColor = "#fafaf7"
+secondaryBackgroundColor = "#f0efe8"
+textColor = "#2c3e3f"
+font = "sans serif"
+
+[server]
+headless = false              # <- abre o navegador automaticamente
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = false
