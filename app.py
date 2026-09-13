@@ -473,7 +473,7 @@ with st.sidebar:
     )
 
     st.divider()
-    if st.button("🔄 Resetar todos os filtros", width="stretch"):
+    if st.button("🔄 Resetar todos os filtros", use_container_width=True):
         st.session_state.reset_key += 1
         st.session_state["aba_ativa"] = "📈 Visão Geral"  # volta pra primeira aba
         st.rerun()
@@ -599,7 +599,7 @@ col_logo, col_titulo = st.columns([1, 5])
 with col_logo:
     try:
         img = carregar_banner()
-        st.image(img, width="stretch")
+        st.image(img, use_container_width=True)
     except Exception:
         st.markdown("<h1 style='font-size:3rem;'>📊</h1>", unsafe_allow_html=True)
 
@@ -634,13 +634,13 @@ ABAS = ["📈 Visão Geral", "🏦 Bancos", "🗺️ UFs", "🔬 Outliers"]
 if "aba_ativa" not in st.session_state:
     st.session_state["aba_ativa"] = ABAS[0]
 
+# ⚠️ NÃO usar `default=` junto com `key=` — conflita e pode gerar warning
 aba_sel = st.segmented_control(
     "Navegação",
     options=ABAS,
     key="aba_ativa",
     label_visibility="collapsed",
     selection_mode="single",
-    default=ABAS[0],
 )
 
 # Segurança: se por algum motivo vier vazio, cai na primeira aba
@@ -687,7 +687,7 @@ if aba_sel == "📈 Visão Geral":
             range=[data_min_c - padding, data_max_c + padding]
         )
 
-    st.plotly_chart(fig_linha, width="stretch")
+    st.plotly_chart(fig_linha, use_container_width=True)
 
     st.info(
         "💡 **Insight**: há um salto visível no volume a partir de maio/2025, "
@@ -819,7 +819,7 @@ if aba_sel == "📈 Visão Geral":
                 legend_title_text='',
             )
             fig_comp = estilizar_fig(fig_comp, altura=380)
-            st.plotly_chart(fig_comp, width="stretch")
+            st.plotly_chart(fig_comp, use_container_width=True)
 
         if delta_vol > 0:
             st.success(
@@ -937,7 +937,7 @@ elif aba_sel == "🏦 Bancos":
         )
         fig_scatter.update_layout(showlegend=False)
         fig_scatter = estilizar_fig(fig_scatter, altura=420)
-        st.plotly_chart(fig_scatter, width="stretch")
+        st.plotly_chart(fig_scatter, use_container_width=True)
 
     with col_b:
         st.subheader("Distribuição do Volume (Box Plot)")
@@ -963,7 +963,7 @@ elif aba_sel == "🏦 Bancos":
         cor_eixo = "#e8f0ef" if escuro else "#2c3e3f"
         fig_box.update_xaxes(tickfont=dict(color=cor_eixo, size=10))
         fig_box.update_yaxes(tickfont=dict(color=cor_eixo, size=10))
-        st.plotly_chart(fig_box, width="stretch")
+        st.plotly_chart(fig_box, use_container_width=True)
 
     st.info(
         "💡 **Insight**: bancos como **BTG Pactual** e **Votorantim** têm ticket médio alto "
@@ -1027,7 +1027,7 @@ elif aba_sel == "🗺️ UFs":
                 margin=dict(l=0, r=0, t=20, b=0),
                 coloraxis_showscale=True,
             )
-            st.plotly_chart(fig_mapa, width="stretch")
+            st.plotly_chart(fig_mapa, use_container_width=True)
         except Exception as e:
             st.warning(f"⚠️ Não foi possível renderizar o mapa: {e}")
             geojson_br = None
@@ -1053,7 +1053,7 @@ elif aba_sel == "🗺️ UFs":
         )
         fig_uf.update_layout(coloraxis_showscale=False)
         fig_uf = estilizar_fig(fig_uf, altura=420)
-        st.plotly_chart(fig_uf, width="stretch")
+        st.plotly_chart(fig_uf, use_container_width=True)
 
     st.info(
         "💡 **Insight**: SP, RJ e MG concentram a maior parte do volume, "
@@ -1105,8 +1105,10 @@ elif aba_sel == "🔬 Outliers":
         )
 
     st.markdown("#### Top 15 outliers removidos")
+    # ✅ Reindex defensivo: garante que a máscara está alinhada ao índice do df
+    mascara_alinhada = mascara_out.reindex(df.index, fill_value=False)
     top_out = (
-        df.loc[mascara_out]
+        df.loc[mascara_alinhada]
         .nlargest(15, 'volume')[['data', 'uf', 'banco_limpo', 'operacoes', 'volume']]
         .copy()
     )
@@ -1114,7 +1116,7 @@ elif aba_sel == "🔬 Outliers":
     top_out['operacoes'] = top_out['operacoes'].apply(fmt_int)
     top_out['volume'] = top_out['volume'].apply(fmt_brl)
     top_out.columns = ['Mês', 'UF', 'Banco', 'Operações', 'Volume']
-    st.dataframe(top_out, width="stretch", hide_index=True)
+    st.dataframe(top_out, use_container_width=True, hide_index=True)
 
 # ============================================================
 # 11. DOWNLOAD
@@ -1124,7 +1126,7 @@ with st.expander("🗂️ Ver e baixar dados filtrados"):
     if AVISO_GLOBAL:
         st.markdown(AVISO_GLOBAL, unsafe_allow_html=True)
 
-    st.dataframe(df_tratado, width="stretch", hide_index=True)
+    st.dataframe(df_tratado, use_container_width=True, hide_index=True)
     csv = df_tratado.to_csv(index=False, sep=';', decimal=',').encode('utf-8')
     st.download_button(
         label="⬇️ Baixar CSV filtrado",
