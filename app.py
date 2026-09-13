@@ -96,6 +96,35 @@ def fmt_pct(val: float, decimals: int = 1, com_sinal: bool = False) -> str:
     return s.replace(".", ",") + "%"
 
 
+# ------------------------------------------------------------
+# ⚠️ AVISOS DE OUTLIERS
+# ------------------------------------------------------------
+def html_aviso_outliers(remover: bool, mult: float, variante: str = "inline") -> str:
+    """
+    Retorna HTML de aviso quando outliers estão sendo removidos.
+    Variantes:
+      - 'inline'  → para colocar dentro de uma seção
+      - 'compact' → versão mais discreta para usar como caption
+    """
+    if not remover:
+        return ""
+    mult_fmt = str(mult).replace(".", ",")
+    if variante == "compact":
+        return (
+            f'<div class="aviso-outliers aviso-outliers-compact">'
+            f'<span class="aviso-outliers-icon">⚠️</span>'
+            f'<span>Exibindo dados <b>sem outliers</b> (IQR por banco · mult. {mult_fmt})</span>'
+            f'</div>'
+        )
+    return (
+        f'<div class="aviso-outliers">'
+        f'<span class="aviso-outliers-icon">⚠️</span>'
+        f'<span>Este painel está <b>ignorando os outliers</b> — '
+        f'método IQR por banco, multiplicador <b>{mult_fmt}</b>.</span>'
+        f'</div>'
+    )
+
+
 def tema_atual_eh_escuro() -> bool:
     """Detecta se o Streamlit está em modo escuro."""
     try:
@@ -245,6 +274,62 @@ st.markdown("""
 .ticker-label { color: #d4e8e6; font-weight: 500; }
 .ticker-value { color: #ffffff; font-weight: 700; }
 
+/* Badge "SEM OUTLIERS" dentro do ticker */
+.ticker-badge {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #fff3c4;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Aviso destacado de outliers */
+.aviso-outliers {
+    background: linear-gradient(90deg, rgba(212, 180, 131, 0.20) 0%, rgba(232, 201, 160, 0.08) 100%);
+    border-left: 4px solid #d4b483;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #8a6f3e;
+    margin: 4px 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.aviso-outliers b { color: #6b5427; }
+.aviso-outliers-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* Variante compacta (usada perto de gráficos) */
+.aviso-outliers-compact {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    margin: 2px 0 8px 0;
+    border-left-width: 3px;
+    display: inline-flex;
+}
+.aviso-outliers-compact .aviso-outliers-icon { font-size: 0.85rem; }
+
+/* Aviso dentro dos cards de ranking */
+.ranking-footer-aviso {
+    background: rgba(212, 180, 131, 0.12);
+    border-top: 1px solid rgba(212, 180, 131, 0.25);
+    color: #8a6f3e;
+    font-size: 0.7rem;
+    padding: 8px 14px;
+    text-align: center;
+    font-weight: 500;
+}
+
 .ranking-card {
     background: #ffffff;
     border-radius: 12px;
@@ -312,6 +397,19 @@ st.markdown("""
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 [data-theme="dark"] .ticker-label { color: #a8c5c2; }
+
+[data-theme="dark"] .aviso-outliers {
+    background: linear-gradient(90deg, rgba(232, 201, 138, 0.15) 0%, rgba(232, 201, 138, 0.04) 100%);
+    border-left-color: #e8c98a;
+    color: #e8c98a;
+}
+[data-theme="dark"] .aviso-outliers b { color: #f5e3b3; }
+[data-theme="dark"] .ranking-footer-aviso {
+    background: rgba(232, 201, 138, 0.10);
+    border-top-color: rgba(232, 201, 138, 0.25);
+    color: #e8c98a;
+}
+
 [data-theme="dark"] .stAlert {
     background-color: rgba(122, 168, 165, 0.08);
     border-color: rgba(122, 168, 165, 0.25);
@@ -432,6 +530,10 @@ df_comp_base = df_full[df_full['tipo'].isin(tipos_sel)].copy()
 if ufs_sel:
     df_comp_base = df_comp_base[df_comp_base['uf'].isin(ufs_sel)]
 
+# ✅ Gera os HTMLs de aviso (reaproveitados em várias seções)
+AVISO_GLOBAL = html_aviso_outliers(remover_outliers, multiplicador, variante="inline")
+AVISO_COMPACTO = html_aviso_outliers(remover_outliers, multiplicador, variante="compact")
+
 # ============================================================
 # 7. TOPBAR TICKER
 # ============================================================
@@ -447,7 +549,12 @@ banco_top = (
     if len(df_tratado) > 0 else "—"
 )
 
-# ✅ Números formatados corretamente
+# ✅ Badge dentro do ticker quando outliers estão sendo removidos
+badge_outliers = (
+    '<span class="ticker-badge">⚠️ SEM OUTLIERS</span>'
+    if remover_outliers else ""
+)
+
 topbar_html = f"""<div class="ticker-bar">
 <div class="ticker-item">
 <span class="ticker-label">VOLUME TOTAL</span>
@@ -473,9 +580,14 @@ topbar_html = f"""<div class="ticker-bar">
 <span class="ticker-label">OUTLIERS</span>
 <span class="ticker-value">{fmt_int(resumo['n_outliers'])} ({fmt_pct(resumo['pct_outliers'], 2)})</span>
 </div>
+{badge_outliers}
 </div>"""
 
 st.markdown(topbar_html, unsafe_allow_html=True)
+
+# ✅ Aviso global logo abaixo do ticker
+if AVISO_GLOBAL:
+    st.markdown(AVISO_GLOBAL, unsafe_allow_html=True)
 
 # ============================================================
 # 8. HEADER
@@ -506,8 +618,10 @@ col1, col2, col3, col4 = st.columns(4)
 col1.metric("Registros", fmt_int(len(df)))
 col2.metric("Outliers", fmt_int(resumo['n_outliers']),
             delta=fmt_pct(resumo['pct_outliers'], 2), delta_color="inverse")
-col3.metric("Volume Total", fmt_brl(vol_total))
-col4.metric("Operações", fmt_int(op_total))
+col3.metric("Volume Total", fmt_brl(vol_total),
+            help="⚠️ Sem outliers" if remover_outliers else None)
+col4.metric("Operações", fmt_int(op_total),
+            help="⚠️ Sem outliers" if remover_outliers else None)
 
 # ============================================================
 # 10. ABAS
@@ -520,9 +634,11 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.subheader("Evolução Mensal do Volume")
     st.caption("Top 8 bancos por volume total. Use zoom e hover do Plotly para explorar.")
+    # ✅ Aviso compacto no gráfico de linha
+    if AVISO_COMPACTO:
+        st.markdown(AVISO_COMPACTO, unsafe_allow_html=True)
 
     agg_tempo_top = agrupar_tempo(df_tratado, top_n=8)
-    # ✅ Pré-formatar para o hover
     agg_tempo_top['volume_fmt'] = agg_tempo_top['volume'].apply(fmt_brl)
 
     fig_linha = px.line(
@@ -562,14 +678,14 @@ with tab1:
     )
 
     # ----------------------------------------------------------
-    # COMPARADOR DE PERÍODOS
+    # COMPARADOR DE PERÍODOS (não usa outliers — sempre com dados brutos)
     # ----------------------------------------------------------
     st.markdown("---")
     st.subheader("🔍 Comparador de Períodos")
     st.caption(
         "Compare o desempenho entre dois recortes de tempo. "
-        "Este comparador **ignora o filtro de período** da barra lateral — "
-        "usa todo o histórico disponível (respeitando Tipo e UF)."
+        "⚠️ **Este comparador usa os dados brutos** (com outliers) — "
+        "ignora o filtro de período e o toggle de outliers da barra lateral."
     )
 
     with st.container():
@@ -639,7 +755,6 @@ with tab1:
         delta_vol = ((vol_p2 - vol_p1) / vol_p1 * 100) if vol_p1 else 0
         delta_op = ((op_p2 - op_p1) / op_p1 * 100) if op_p1 else 0
 
-        # ✅ Métricas com formatação brasileira
         st.markdown("#### 📊 Resultado da Comparação")
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Volume A", fmt_brl(vol_p1))
@@ -647,7 +762,6 @@ with tab1:
         m3.metric("Operações A", fmt_int(op_p1))
         m4.metric("Operações B", fmt_int(op_p2), delta=fmt_pct(delta_op, 1, com_sinal=True))
 
-        # ✅ Gráfico comparativo com hover formatado
         st.markdown("##### 📈 Evolução lado a lado")
         df_p1_agg = (
             df_p1.groupby('data', as_index=False)['volume'].sum()
@@ -689,7 +803,6 @@ with tab1:
             fig_comp = estilizar_fig(fig_comp, altura=380)
             st.plotly_chart(fig_comp, use_container_width=True)
 
-        # ✅ Insight com percentual brasileiro
         if delta_vol > 0:
             st.success(
                 f"📈 O **Período B** teve um crescimento de **{fmt_pct(delta_vol, 1, com_sinal=True)}** "
@@ -706,15 +819,23 @@ with tab1:
 # ---------- ABA 2 ----------
 with tab2:
     st.subheader("🏆 Rankings Comparativos")
-    st.caption("Top 8 bancos e UFs por volume e operações. Reflita o comportamento das instituições.")
+    st.caption("Top 8 bancos e UFs por volume e operações. Reflete o comportamento das instituições.")
+    # ✅ Aviso compacto antes dos rankings
+    if AVISO_COMPACTO:
+        st.markdown(AVISO_COMPACTO, unsafe_allow_html=True)
 
     r1, r2, r3 = st.columns(3)
 
-    # Ranking 1 — Top 8 bancos por volume
     ranking_vol = (
         df_tratado.groupby('banco_limpo', as_index=False)
         .agg(volume=('volume', 'sum'), operacoes=('operacoes', 'sum'))
         .nlargest(8, 'volume')
+    )
+
+    # ✅ Footer HTML adicionado aos cards quando outliers estão removidos
+    footer_aviso = (
+        '<div class="ranking-footer-aviso">⚠️ Sem outliers (IQR por banco)</div>'
+        if remover_outliers else ""
     )
 
     with r1:
@@ -723,12 +844,12 @@ with tab2:
             icone="💎",
             dados=ranking_vol.to_dict('records'),
             label_fn=lambda r: r['banco_limpo'][:20],
-            sub_fn=lambda r: f"{fmt_int(r['operacoes'])} operações",  # ✅
+            sub_fn=lambda r: f"{fmt_int(r['operacoes'])} operações",
             value_fn=lambda r: fmt_brl(r['volume']),
         )
+        card = card.replace("</div>", footer_aviso + "</div>", 1) if footer_aviso else card
         st.markdown(card, unsafe_allow_html=True)
 
-    # Ranking 2 — Top 8 bancos por operações
     ranking_ops = (
         df_tratado.groupby('banco_limpo', as_index=False)
         .agg(volume=('volume', 'sum'), operacoes=('operacoes', 'sum'))
@@ -742,11 +863,11 @@ with tab2:
             dados=ranking_ops.to_dict('records'),
             label_fn=lambda r: r['banco_limpo'][:20],
             sub_fn=lambda r: fmt_brl(r['volume']),
-            value_fn=lambda r: fmt_int(r['operacoes']),  # ✅
+            value_fn=lambda r: fmt_int(r['operacoes']),
         )
+        card = card.replace("</div>", footer_aviso + "</div>", 1) if footer_aviso else card
         st.markdown(card, unsafe_allow_html=True)
 
-    # Ranking 3 — Top 8 UFs por volume
     ranking_uf = agrupar_uf(df_tratado).nlargest(8, 'volume')
 
     with r3:
@@ -755,9 +876,10 @@ with tab2:
             icone="🗺️",
             dados=ranking_uf.to_dict('records'),
             label_fn=lambda r: r['uf'],
-            sub_fn=lambda r: f"{fmt_int(r['operacoes'])} operações",  # ✅
+            sub_fn=lambda r: f"{fmt_int(r['operacoes'])} operações",
             value_fn=lambda r: fmt_brl(r['volume']),
         )
+        card = card.replace("</div>", footer_aviso + "</div>", 1) if footer_aviso else card
         st.markdown(card, unsafe_allow_html=True)
 
     # ----------------------------------------------------------
@@ -768,6 +890,9 @@ with tab2:
 
     with col_a:
         st.subheader("Ticket Médio × Nº de Operações")
+        if AVISO_COMPACTO:
+            st.markdown(AVISO_COMPACTO, unsafe_allow_html=True)
+
         df_ticket = (
             df_tratado.groupby('banco_limpo', as_index=False)
             .agg(volume=('volume', 'sum'), operacoes=('operacoes', 'sum'))
@@ -775,7 +900,6 @@ with tab2:
         df_ticket['ticket_medio'] = df_ticket['volume'] / df_ticket['operacoes']
         df_ticket = df_ticket[df_ticket['operacoes'] > 0]
 
-        # ✅ Pré-formatar para o hover
         df_ticket['banco_fmt'] = df_ticket['banco_limpo']
         df_ticket['volume_fmt'] = df_ticket['volume'].apply(fmt_brl)
         df_ticket['operacoes_fmt'] = df_ticket['operacoes'].apply(fmt_int)
@@ -802,6 +926,9 @@ with tab2:
     with col_b:
         st.subheader("Distribuição do Volume (Box Plot)")
         st.caption("Mediana, quartis e outliers naturais por banco.")
+        if AVISO_COMPACTO:
+            st.markdown(AVISO_COMPACTO, unsafe_allow_html=True)
+
         top8_nomes = ranking_vol['banco_limpo'].tolist()
         df_box = df[df['banco_limpo'].isin(top8_nomes)].copy()
         df_box['volume_fmt'] = df_box['volume'].apply(fmt_brl)
@@ -832,9 +959,10 @@ with tab2:
 with tab3:
     st.subheader("Distribuição Geográfica do Volume")
     st.caption("Volume financeiro agregado por Unidade Federativa.")
+    if AVISO_COMPACTO:
+        st.markdown(AVISO_COMPACTO, unsafe_allow_html=True)
 
     agg_uf = agrupar_uf(df_tratado)
-    # ✅ Pré-formatar para o hover
     agg_uf['volume_fmt'] = agg_uf['volume'].apply(fmt_brl)
     agg_uf['operacoes_fmt'] = agg_uf['operacoes'].apply(fmt_int)
 
@@ -854,7 +982,6 @@ with tab3:
                 labels={'volume': 'Volume (R$)', 'uf': 'UF'},
                 custom_data=['volume_fmt', 'operacoes_fmt'],
             )
-            # ✅ Hover com formato brasileiro
             fig_mapa.update_traces(
                 hovertemplate=(
                     "<b>%{location}</b><br>"
@@ -940,13 +1067,34 @@ with tab4:
         """
     )
 
+    # ✅ Nota sobre o estado atual do toggle nesta aba
+    if remover_outliers:
+        st.markdown(
+            '<div class="aviso-outliers">'
+            '<span class="aviso-outliers-icon">⚠️</span>'
+            '<span>O toggle <b>"Remover outliers"</b> está <b>ativado</b> — '
+            'todas as outras abas estão exibindo os dados <b>sem outliers</b>.</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="aviso-outliers" style="border-left-color: #7ba8a5; '
+            'background: linear-gradient(90deg, rgba(123, 168, 165, 0.18) 0%, rgba(123, 168, 165, 0.05) 100%); '
+            'color: #4a7c7e;">'
+            '<span class="aviso-outliers-icon">✅</span>'
+            '<span>O toggle <b>"Remover outliers"</b> está <b>desativado</b> — '
+            'todas as outras abas estão exibindo os dados <b>com outliers</b>.</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
     st.markdown("#### Top 15 outliers removidos")
     top_out = (
         df.loc[mascara_out]
         .nlargest(15, 'volume')[['data', 'uf', 'banco_limpo', 'operacoes', 'volume']]
         .copy()
     )
-    # ✅ Formatando a tabela com padrão brasileiro
     top_out['data'] = pd.to_datetime(top_out['data']).dt.strftime('%m/%Y')
     top_out['operacoes'] = top_out['operacoes'].apply(fmt_int)
     top_out['volume'] = top_out['volume'].apply(fmt_brl)
@@ -958,6 +1106,10 @@ with tab4:
 # ============================================================
 st.markdown("---")
 with st.expander("🗂️ Ver e baixar dados filtrados"):
+    # ✅ Aviso dentro do expander
+    if AVISO_GLOBAL:
+        st.markdown(AVISO_GLOBAL, unsafe_allow_html=True)
+
     st.dataframe(df_tratado, use_container_width=True, hide_index=True)
     csv = df_tratado.to_csv(index=False, sep=';', decimal=',').encode('utf-8')
     st.download_button(
